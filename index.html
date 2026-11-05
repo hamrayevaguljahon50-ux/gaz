@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FuelStation Pro - Fuel & Gas Inventory Management System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 500: '#10b981', 600: '#059669', 700: '#047857' },
+                        gasoline: '#3b82f6',
+                        propane: '#ec4899',
+                        diesel: '#f59e0b',
+                        methane: '#a855f7'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .light .glass-panel {
+            background: rgba(255, 255, 255, 0.90);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 4px;
+        }
+
+        @keyframes liquidWave {
+            0% {
+                transform: translateX(-50%) rotate(0deg);
+            }
+
+            50% {
+                transform: translateX(0%) rotate(5deg);
+            }
+
+            100% {
+                transform: translateX(-50%) rotate(0deg);
+            }
+        }
+
+        .liquid-animation {
+            animation: liquidWave 6s infinite ease-in-out;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-slate-950 text-slate-100 dark:bg-slate-950 dark:text-slate-100 light:bg-slate-100 light:text-slate-800 min-h-screen flex flex-col antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-200">
+
+    <!-- Notification Toast Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none">
+    </div>
+
+    <!-- TOP HORIZONTAL NAVIGATION BAR -->
+    <header
+        class="bg-slate-900 border-b border-slate-800 dark:bg-slate-900 dark:border-slate-800 light:bg-white light:border-slate-200 sticky top-0 z-40 backdrop-blur shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+
+                <!-- Station Brand Logo -->
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                        <i class="fa-solid fa-gas-pump text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <span
+                            class="font-extrabold text-base tracking-tight text-white dark:text-white light:text-slate-900">FuelStation<span
+                                class="text-emerald-400">Pro</span></span>
+                        <p class="text-[10px] text-slate-400 font-semibold tracking-wider uppercase hidden sm:block"
+                            data-i18n="tagline">Gasoline & Gas Fuel Station Monitoring</p>
+                    </div>
+                </div>
+
+                <!-- Main Section Nav Buttons (Top Navbar) -->
+                <nav class="hidden md:flex items-center space-x-1">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard"
+                        class="nav-btn px-3 py-2 rounded-xl text-xs font-semibold transition text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <span data-i18n="navDashboard">Dashboard</span>
+                    </button>
+                    <button onclick="switchTab('tanks')" id="nav-tanks"
+                        class="nav-btn px-3 py-2 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2">
+                        <i class="fa-solid fa-database"></i>
+                        <span data-i18n="navTanks">Stock & Tanks</span>
+                    </button>
+                    <button onclick="switchTab('deliveries')" id="nav-deliveries"
+                        class="nav-btn px-3 py-2 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2">
+                        <i class="fa-solid fa-truck-arrow-right"></i>
+                        <span data-i18n="navInflow">Deliveries (Inflows)</span>
+                    </button>
+                    <button onclick="switchTab('sales')" id="nav-sales"
+                        class="nav-btn px-3 py-2 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2">
+                        <i class="fa-solid fa-cash-register"></i>
+                        <span data-i18n="navOutflow">Dispense (Outflows)</span>
+                    </button>
+                    <button onclick="switchTab('reports')" id="nav-reports"
+                        class="nav-btn px-3 py-2 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2">
+                        <i class="fa-solid fa-envelope-open-text"></i>
+                        <span data-i18n="navReports">Gmail Reports</span>
+                    </button>
+                    <button onclick="switchTab('python')" id="nav-python"
+                        class="nav-btn px-3 py-2 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2">
+                        <i class="fa-brands fa-python text-amber-400"></i>
+                        <span data-i18n="navPython">Python Tools</span>
+                    </button>
+                </nav>
+
+                <!-- Language Switcher & Controls -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <!-- Language Dropdown/Buttons -->
+                    <div
+                        class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs font-semibold dark:bg-slate-950 dark:border-slate-800 light:bg-slate-200">
+                        <button onclick="setLanguage('en')" id="lang-en"
+                            class="px-2 py-1 rounded-lg transition hover:text-white">EN</button>
+                        <button onclick="setLanguage('ru')" id="lang-ru"
+                            class="px-2 py-1 rounded-lg transition hover:text-white">RU</button>
+                        <button onclick="setLanguage('uz')" id="lang-uz"
+                            class="px-2 py-1 rounded-lg transition hover:text-white">UZ</button>
+                    </div>
+
+                    <!-- Theme Toggle -->
+                    <button onclick="toggleTheme()"
+                        class="p-2 bg-slate-800 hover:bg-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 light:bg-slate-200 light:hover:bg-slate-300 text-slate-300 dark:text-slate-300 light:text-slate-700 rounded-xl border border-slate-700 dark:border-slate-700 light:border-slate-300 text-xs transition">
+                        <i id="themeIcon" class="fa-solid fa-moon"></i>
+                    </button>
+
+                    <!-- Reset Demo State -->
+                    <button onclick="resetToDemoData()" title="Reset Demo Data"
+                        class="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 text-xs transition">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navbar Strip -->
+        <div
+            class="md:hidden flex overflow-x-auto px-4 py-2 bg-slate-950 dark:bg-slate-950 light:bg-slate-200 border-t border-slate-800 space-x-2 text-xs font-medium custom-scrollbar">
+            <button onclick="switchTab('dashboard')"
+                class="px-3 py-1.5 rounded-lg bg-slate-800 text-emerald-400 whitespace-nowrap"
+                data-i18n="navDashboard">Dashboard</button>
+            <button onclick="switchTab('tanks')"
+                class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 whitespace-nowrap" data-i18n="navTanks">Stock
+                & Tanks</button>
+            <button onclick="switchTab('deliveries')"
+                class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 whitespace-nowrap"
+                data-i18n="navInflow">Deliveries</button>
+            <button onclick="switchTab('sales')"
+                class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 whitespace-nowrap"
+                data-i18n="navOutflow">Dispense</button>
+            <button onclick="switchTab('reports')"
+                class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 whitespace-nowrap"
+                data-i18n="navReports">Gmail Reports</button>
+            <button onclick="switchTab('python')"
+                class="px-3 py-1.5 rounded-lg bg-slate-800 text-amber-400 whitespace-nowrap"
+                data-i18n="navPython">Python Tools</button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl w-full mx-auto p-4 md:p-8 space-y-6 flex-1">
+
+        <!-- SECTION 1: DASHBOARD ANALYTICS -->
+        <section id="tab-dashboard" class="tab-content space-y-6">
+            <!-- Metric KPI Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-gasoline shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                            data-i18n="cardGasoline">Gasoline Reserves</p>
+                        <i class="fa-solid fa-gas-pump text-gasoline text-lg"></i>
+                    </div>
+                    <h3 class="text-2xl font-extrabold text-white dark:text-white light:text-slate-900 font-mono mt-2"
+                        id="statGasolineStock">0 L</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">A-92 & A-95 Underground Tanks</p>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-propane shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                            data-i18n="cardPropane">Propane LPG Stock</p>
+                        <i class="fa-solid fa-fire text-propane text-lg"></i>
+                    </div>
+                    <h3 class="text-2xl font-extrabold text-white dark:text-white light:text-slate-900 font-mono mt-2"
+                        id="statPropaneStock">0 Kg</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">Liquefied Petroleum Gas Tank</p>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-methane shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                            data-i18n="cardMethane">CNG Methane Gas</p>
+                        <i class="fa-solid fa-gauge text-methane text-lg"></i>
+                    </div>
+                    <h3 class="text-2xl font-extrabold text-white dark:text-white light:text-slate-900 font-mono mt-2"
+                        id="statMethaneStock">0 m³</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">Compressed Natural Gas Bank</p>
+                </div>
+
+                <div class="glass-panel p-5 rounded-2xl border-l-4 border-emerald-500 shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider"
+                            data-i18n="cardDailySales">Today's Total Revenue</p>
+                        <i class="fa-solid fa-sack-dollar text-emerald-400 text-lg"></i>
+                    </div>
+                    <h3 class="text-2xl font-extrabold text-white dark:text-white light:text-slate-900 font-mono mt-2"
+                        id="statTodaySales">0 UZS</h3>
+                    <p class="text-[11px] text-emerald-400 mt-1 font-medium" id="statTodaySalesVol">0 units dispensed
+                    </p>
+                </div>
+            </div>
+
+            <!-- Chart Visualizations -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-white dark:text-white light:text-slate-900 text-base"
+                                data-i18n="chartBarTitle">7-Day Delivery vs. Dispensed Volume</h3>
+                            <p class="text-xs text-slate-400" data-i18n="chartBarSub">Comparison of incoming tankers vs
+                                dispenser consumption</p>
+                        </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="barChartInflowOutflow"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-white dark:text-white light:text-slate-900 text-base"
+                                data-i18n="chartDonutTitle">Fuel Volume Breakdown</h3>
+                            <p class="text-xs text-slate-400" data-i18n="chartDonutSub">Distribution of current stock
+                                reserves</p>
+                        </div>
+                    </div>
+                    <div class="h-64 flex items-center justify-center">
+                        <canvas id="donutChartStock"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Graphical Tank Gauges Visualizer -->
+            <div class="glass-panel p-6 rounded-2xl">
+                <h3 class="font-bold text-white dark:text-white light:text-slate-900 text-base mb-4"
+                    data-i18n="tankGaugesTitle">Storage Tank Visual Levels & Threshold Alerts</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" id="tankCardsDashboard">
+                    <!-- Dynamic Graphic Visual Gauges injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: STOCK & TANKS MANAGEMENT -->
+        <section id="tab-tanks" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-2xl">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                    <div>
+                        <h3 class="font-bold text-lg text-white dark:text-white light:text-slate-900"
+                            data-i18n="tankMasterTitle">Master Tank Inventory & Calibration</h3>
+                        <p class="text-xs text-slate-400" data-i18n="tankMasterSub">Manage total capacity, direct stock
+                            overrides, and safety thresholds</p>
+                    </div>
+                    <button onclick="saveTankSettings()"
+                        class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span data-i18n="btnSaveTanks">Save Master Calibration</span>
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead
+                            class="bg-slate-900/90 dark:bg-slate-900/90 light:bg-slate-200 text-xs text-slate-400 uppercase border-b border-slate-800">
+                            <tr>
+                                <th class="p-3" data-i18n="tblFuelType">Fuel / Gas Category</th>
+                                <th class="p-3" data-i18n="tblCapacity">Total Capacity</th>
+                                <th class="p-3" data-i18n="tblCurrentStock">Current Stock</th>
+                                <th class="p-3" data-i18n="tblLevelGauge">Fill Gauge</th>
+                                <th class="p-3" data-i18n="tblMinThreshold">Warning Threshold</th>
+                                <th class="p-3" data-i18n="tblStatus">Safety Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tankMasterBody" class="divide-y divide-slate-800/60 font-mono text-xs">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: DELIVERIES (INFLOWS) -->
+        <section id="tab-deliveries" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Inflow Entry Form -->
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-1">
+                    <h3 class="font-bold text-lg text-white dark:text-white light:text-slate-900 mb-1"
+                        data-i18n="inflowFormTitle">Record Delivery (Inflow)</h3>
+                    <p class="text-xs text-slate-400 mb-5" data-i18n="inflowFormSub">Manual input for tanker truck
+                        arrivals and gas fills</p>
+
+                    <form id="inflowForm" class="space-y-4">
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblFuelType">Fuel / Gas Type</label>
+                            <select id="inflowFuel"
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500">
+                                <option value="GASOLINE_92">Gasoline A-92</option>
+                                <option value="GASOLINE_95">Gasoline A-95</option>
+                                <option value="DIESEL">Diesel Fuel</option>
+                                <option value="PROPANE_LPG">Propane LPG</option>
+                                <option value="CNG_METHANE">CNG Methane</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblQuantity">Volume Delivered (L, Kg, or m³)</label>
+                            <input type="number" id="inflowQty" min="1" step="0.1" required
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500"
+                                placeholder="e.g. 5000">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                    data-i18n="lblDensity">Density (g/cm³)</label>
+                                <input type="number" id="inflowDensity" step="0.001" placeholder="0.745"
+                                    class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                    data-i18n="lblTemp">Temp (°C)</label>
+                                <input type="number" id="inflowTemp" step="0.1" placeholder="18.5"
+                                    class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblCost">Shipment Cost ($ / UZS)</label>
+                            <input type="number" id="inflowCost" step="1000"
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500"
+                                placeholder="e.g. 45000000">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblSupplier">Supplier Name</label>
+                            <input type="text" id="inflowSupplier" required
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500"
+                                placeholder="e.g. Uzbekneftegaz Trans">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblBatchNo">Invoice / Waybill #</label>
+                            <input type="text" id="inflowBatch" required
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500"
+                                placeholder="INV-2026-88">
+                        </div>
+                        <button type="submit"
+                            class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 font-bold text-white rounded-xl shadow-lg shadow-emerald-600/20 transition duration-150 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span data-i18n="btnRecordInflow">Record Delivery</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Inflows Table Log -->
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                        <div>
+                            <h3 class="font-bold text-lg text-white dark:text-white light:text-slate-900"
+                                data-i18n="inflowLogTitle">Inflow Deliveries Log</h3>
+                            <p class="text-xs text-slate-400" data-i18n="inflowLogSub">History of accepted fuel and gas
+                                shipments</p>
+                        </div>
+                        <button onclick="exportCSV('inflow')"
+                            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-800 light:bg-slate-200 border border-slate-700 rounded-lg text-xs font-semibold text-emerald-400 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-file-csv"></i> <span data-i18n="btnExportCSV">Export CSV</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[480px]">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead
+                                class="sticky top-0 bg-slate-900 dark:bg-slate-900 light:bg-slate-200 z-10 text-xs text-slate-400 uppercase border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3" data-i18n="tblDate">Date & Time</th>
+                                    <th class="p-3" data-i18n="tblFuelType">Type</th>
+                                    <th class="p-3" data-i18n="tblQuantity">Qty</th>
+                                    <th class="p-3" data-i18n="lblCost">Cost</th>
+                                    <th class="p-3" data-i18n="tblSupplier">Supplier</th>
+                                    <th class="p-3" data-i18n="tblDoc">Invoice</th>
+                                    <th class="p-3 text-right" data-i18n="tblActions">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inflowLogBody" class="divide-y divide-slate-800/60 font-mono text-xs">
+                                <!-- Dynamic rendering -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: DISPENSE & SALES (OUTFLOWS) -->
+        <section id="tab-sales" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Outflow Entry Form -->
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-1">
+                    <h3 class="font-bold text-lg text-white dark:text-white light:text-slate-900 mb-1"
+                        data-i18n="outflowFormTitle">Record Dispensed / Sales</h3>
+                    <p class="text-xs text-slate-400 mb-5" data-i18n="outflowFormSub">Manual log for pump sales and
+                        meter differential checks</p>
+
+                    <form id="outflowForm" class="space-y-4">
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblFuelType">Fuel / Gas Type</label>
+                            <select id="outflowFuel"
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-amber-500">
+                                <option value="GASOLINE_92">Gasoline A-92</option>
+                                <option value="GASOLINE_95">Gasoline A-95</option>
+                                <option value="DIESEL">Diesel Fuel</option>
+                                <option value="PROPANE_LPG">Propane LPG</option>
+                                <option value="CNG_METHANE">CNG Methane</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblPumpID">Dispenser / Nozzle ID</label>
+                            <select id="outflowPump"
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-amber-500">
+                                <option value="Dispenser #1">Dispenser Station #1 (Gasoline)</option>
+                                <option value="Dispenser #2">Dispenser Station #2 (Gasoline)</option>
+                                <option value="Dispenser #3">Dispenser Station #3 (Diesel)</option>
+                                <option value="Propane Nozzle #1">Propane LPG Nozzle #1</option>
+                                <option value="CNG Compressor #1">CNG Methane Compressor #1</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                    data-i18n="lblStartMeter">Start Meter</label>
+                                <input type="number" id="outflowStartMeter" step="0.1" placeholder="10200.0"
+                                    class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label
+                                    class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                    data-i18n="lblEndMeter">End Meter</label>
+                                <input type="number" id="outflowEndMeter" step="0.1" placeholder="11400.0"
+                                    class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-amber-500">
+                            </div>
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblQuantity">Volume Dispensed (L, Kg, or m³)</label>
+                            <input type="number" id="outflowQty" min="0.1" step="0.1" required
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-amber-500"
+                                placeholder="e.g. 1200">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblUnitPrice">Unit Price ($ / UZS)</label>
+                            <input type="number" id="outflowPrice" min="0" step="100" required
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-amber-500"
+                                placeholder="e.g. 9500">
+                        </div>
+                        <button type="submit"
+                            class="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 font-bold text-white rounded-xl shadow-lg shadow-amber-500/20 transition duration-150 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-receipt"></i>
+                            <span data-i18n="btnRecordOutflow">Record Sale</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Outflows Log Table -->
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                        <div>
+                            <h3 class="font-bold text-lg text-white dark:text-white light:text-slate-900"
+                                data-i18n="outflowLogTitle">Dispensed Sales Register</h3>
+                            <p class="text-xs text-slate-400" data-i18n="outflowLogSub">Recent meter readings & customer
+                                sales</p>
+                        </div>
+                        <button onclick="exportCSV('outflow')"
+                            class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-800 light:bg-slate-200 border border-slate-700 rounded-lg text-xs font-semibold text-amber-400 flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-file-csv"></i> <span data-i18n="btnExportCSV">Export CSV</span>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto max-h-[480px]">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead
+                                class="sticky top-0 bg-slate-900 dark:bg-slate-900 light:bg-slate-200 z-10 text-xs text-slate-400 uppercase border-b border-slate-800">
+                                <tr>
+                                    <th class="p-3" data-i18n="tblDate">Date & Time</th>
+                                    <th class="p-3" data-i18n="tblFuelType">Fuel</th>
+                                    <th class="p-3" data-i18n="tblPump">Dispenser</th>
+                                    <th class="p-3" data-i18n="tblMeters">Meters</th>
+                                    <th class="p-3" data-i18n="tblQuantity">Volume</th>
+                                    <th class="p-3" data-i18n="tblTotalVal">Total Revenue</th>
+                                    <th class="p-3 text-right" data-i18n="tblActions">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="outflowLogBody" class="divide-y divide-slate-800/60 font-mono text-xs">
+                                <!-- Dynamic rendering -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: GMAIL REPORTS & DISPATCHER -->
+        <section id="tab-reports" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Report Config -->
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-1">
+                    <h3 class="font-bold text-lg text-white dark:text-white light:text-slate-900 mb-1"
+                        data-i18n="reportTitle">Gmail Report Dispatcher</h3>
+                    <p class="text-xs text-slate-400 mb-5" data-i18n="reportSub">Auto-generate shift summaries and open
+                        directly in Gmail</p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblRecipient">Supervisor / HQ Email</label>
+                            <input type="email" id="reportEmail"
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500"
+                                placeholder="supervisor@fuelstation.uz" value="headquarters@fuelstation.com">
+                        </div>
+                        <div>
+                            <label
+                                class="block text-xs font-semibold text-slate-300 dark:text-slate-300 light:text-slate-700 mb-1"
+                                data-i18n="lblReportType">Report Type</label>
+                            <select id="reportType" onchange="generateReportPreview()"
+                                class="w-full bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white dark:text-white light:text-slate-900 focus:outline-none focus:border-emerald-500">
+                                <option value="DAILY_SUMMARY">Shift Inventory & Sales Summary</option>
+                                <option value="LOW_STOCK">Critical Low Stock Warning</option>
+                                <option value="DELIVERY_AUDIT">Shipment Deliveries Audit</option>
+                            </select>
+                        </div>
+                        <button onclick="sendViaGmail()"
+                            class="w-full py-3 bg-red-600 hover:bg-red-500 font-bold text-white rounded-xl shadow-lg shadow-red-600/20 transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-envelope-circle-check"></i>
+                            <span data-i18n="btnSendGmail">Open Gmail Compose</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Text Preview -->
+                <div class="glass-panel p-6 rounded-2xl lg:col-span-2">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-bold text-base text-white dark:text-white light:text-slate-900"
+                            data-i18n="reportPreview">Email Body Preview</h3>
+                        <button onclick="copyReportText()"
+                            class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> Copy Text
+                        </button>
+                    </div>
+                    <div class="bg-slate-950 dark:bg-slate-950 light:bg-slate-100 p-4 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 dark:text-slate-300 light:text-slate-800 h-80 overflow-y-auto whitespace-pre-wrap"
+                        id="reportPreviewContent">
+                        <!-- Live preview generated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: STANDALONE PYTHON OFFLINE TOOLS -->
+        <section id="tab-python" class="tab-content hidden space-y-6">
+            <div class="glass-panel p-6 rounded-2xl space-y-4">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <i class="fa-brands fa-python text-amber-400 text-2xl"></i>
+                            <h3 class="font-bold text-lg text-white dark:text-white light:text-slate-900">Python Offline
+                                Utility Script (`fuel_tracker.py`)</h3>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">Ready-to-run Python script for offline station inventory
+                            parsing, CSV analysis, and SMTP mail dispatch.</p>
+                    </div>
+                    <button onclick="copyPythonScript()"
+                        class="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center gap-1.5">
+                        <i class="fa-regular fa-copy"></i> Copy Python Code
+                    </button>
+                </div>
+
+                <div
+                    class="relative bg-slate-950 dark:bg-slate-950 light:bg-slate-900 p-4 rounded-xl border border-slate-800 font-mono text-xs text-amber-300/90 h-[480px] overflow-y-auto">
+                    <pre><code id="pythonCodeBlock"># =====================================================================
+# FUEL STATION INVENTORY TRACKER & OFFLINE CSV LOG PARSER
+# Language: Python 3.8+
+# =====================================================================
+
+import csv
+import json
+import smtplib
+from email.mime.text import MIMEText
+from datetime import datetime
+
+# Sample Tank Storage Data structure
+INITIAL_TANKS = {
+    "GASOLINE_92": {"name": "Gasoline A-92", "capacity": 40000, "stock": 24500, "min": 8000, "unit": "L"},
+    "GASOLINE_95": {"name": "Gasoline A-95", "capacity": 30000, "stock": 18200, "min": 6000, "unit": "L"},
+    "DIESEL":      {"name": "Diesel Fuel",   "capacity": 50000, "stock": 38900, "min": 10000, "unit": "L"},
+    "PROPANE_LPG": {"name": "Propane LPG",  "capacity": 25000, "stock": 4100,  "min": 5000, "unit": "Kg"},
+    "CNG_METHANE": {"name": "CNG Methane",  "capacity": 15000, "stock": 9800,  "min": 3000, "unit": "m3"}
+}
+
+def calculate_current_stock(tanks, inflows, outflows):
+    """ Formula: Current Stock = Initial Calibration + Inflows - Outflows """
+    updated = tanks.copy()
+    
+    for item in inflows:
+        fuel = item.get("fuel")
+        if fuel in updated:
+            updated[fuel]["stock"] += float(item.get("qty", 0))
+            
+    for item in outflows:
+        fuel = item.get("fuel")
+        if fuel in updated:
+            updated[fuel]["stock"] -= float(item.get("qty", 0))
+            
+    return updated
+
+def generate_shift_report(tanks):
+    """ Format shift report text for email body or printing """
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    report = f"--- REFUELING STATION SHIFT REPORT [{now}] ---\n\n"
+    
+    for key, data in tanks.items():
+        pct = (data["stock"] / data["capacity"]) * 100
+        status = "CRITICAL LOW" if data["stock"] <= data["min"] else "OK"
+        report += f"Fuel: {data['name']}\n"
+        report += f"  Stock: {data['stock']:,} {data['unit']} / {data['capacity']:,} {data['unit']} ({pct:.1f}%)\n"
+        report += f"  Status: [{status}]\n\n"
+        
+    return report
+
+def send_smtp_alert(recipient_email, subject, body, smtp_host="smtp.gmail.com", smtp_port=587, user="", password=""):
+    """ Dispatch automated alert via standard Python SMTP client """
+    try:
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = user
+        msg['To'] = recipient_email
+
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
+            server.starttls()
+            server.login(user, password)
+            server.send_message(msg)
+        print("[+] Email alert dispatched successfully.")
+    except Exception as e:
+        print(f"[-] Failed to dispatch email alert: {e}")
+
+if __name__ == "__main__":
+    print("[*] Processing Refueling Station Data Offline...")
+    report = generate_shift_report(INITIAL_TANKS)
+    print(report)
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- JAVASCRIPT ENGINE -->
+    <script>
+        // --- TRANSLATION DICTIONARY (EN, RU, UZ) ---
+        const translations = {
+            en: {
+                tagline: "Gasoline & Gas Fuel Station Monitoring",
+                navDashboard: "Dashboard",
+                navTanks: "Stock & Tanks",
+                navInflow: "Deliveries (Inflows)",
+                navOutflow: "Dispense (Outflows)",
+                navReports: "Gmail Reports",
+                navPython: "Python Tools",
+                cardGasoline: "Gasoline Reserves",
+                cardPropane: "Propane LPG Stock",
+                cardMethane: "CNG Methane Gas",
+                cardDailySales: "Today's Total Revenue",
+                chartBarTitle: "7-Day Delivery vs. Dispensed Volume",
+                chartBarSub: "Comparison of incoming tankers vs dispenser consumption",
+                chartDonutTitle: "Fuel Volume Breakdown",
+                chartDonutSub: "Distribution of current stock reserves",
+                tankGaugesTitle: "Storage Tank Visual Levels & Threshold Alerts",
+                tankMasterTitle: "Master Tank Inventory & Calibration",
+                tankMasterSub: "Manage total capacity, direct stock overrides, and safety thresholds",
+                btnSaveTanks: "Save Master Calibration",
+                inflowFormTitle: "Record Delivery (Inflow)",
+                inflowFormSub: "Manual input for tanker truck arrivals and gas fills",
+                outflowFormTitle: "Record Dispensed / Sales",
+                outflowFormSub: "Manual log for pump sales and meter differential checks",
+                reportTitle: "Gmail Report Dispatcher",
+                reportSub: "Auto-generate shift summaries and open directly in Gmail",
+                lblFuelType: "Fuel / Gas Type",
+                lblQuantity: "Volume (L, Kg, or m³)",
+                lblCost: "Shipment Cost ($ / UZS)",
+                lblSupplier: "Supplier Name",
+                lblBatchNo: "Invoice / Waybill #",
+                lblDensity: "Density (g/cm³)",
+                lblTemp: "Temp (°C)",
+                lblPumpID: "Dispenser / Nozzle ID",
+                lblStartMeter: "Start Meter",
+                lblEndMeter: "End Meter",
+                lblUnitPrice: "Unit Price ($ / UZS)",
+                lblRecipient: "Supervisor / HQ Email",
+                lblReportType: "Report Type",
+                btnRecordInflow: "Record Delivery",
+                btnRecordOutflow: "Record Sale",
+                btnSendGmail: "Open Gmail Compose",
+                btnExportCSV: "Export CSV",
+                tblFuelType: "Fuel Category",
+                tblCapacity: "Total Capacity",
+                tblCurrentStock: "Current Level",
+                tblLevelGauge: "Fill Gauge",
+                tblMinThreshold: "Warning Threshold",
+                tblStatus: "Safety Status",
+                tblDate: "Date & Time",
+                tblSupplier: "Supplier",
+                tblDoc: "Invoice #",
+                tblPump: "Dispenser",
+                tblMeters: "Meters (Start - End)",
+                tblQuantity: "Volume",
+                tblTotalVal: "Total Value",
+                tblActions: "Action",
+                inflowLogTitle: "Inflow Deliveries Log",
+                inflowLogSub: "History of accepted fuel and gas shipments",
+                outflowLogTitle: "Dispensed Sales Register",
+                outflowLogSub: "Recent meter readings & customer sales",
+                reportPreview: "Email Body Preview"
+            },
+            ru: {
+                tagline: "Мониторинг АЗС и АГНКС (Бензин и Газ)",
+                navDashboard: "Дашборд",
+                navTanks: "Запасы и Баки",
+                navInflow: "Поставки (Приход)",
+                navOutflow: "Продажи (Расход)",
+                navReports: "Отчеты Gmail",
+                navPython: "Инструменты Python",
+                cardGasoline: "Запас Бензина",
+                cardPropane: "Запас Пропана (СУГ)",
+                cardMethane: "Запас Метана (СПГ)",
+                cardDailySales: "Выручка за Сегодня",
+                chartBarTitle: "Динамика за 7 Дней (Приход vs Расход)",
+                chartBarSub: "Сравнение объемов поставки и отпуска топлива",
+                chartDonutTitle: "Соотношение Запасов",
+                chartDonutSub: "Распределение объемов по типам топлива",
+                tankGaugesTitle: "Визуальный Уровень Резервуаров и Пороги Тревоги",
+                tankMasterTitle: "Реестр и Калибровка Резервуаров",
+                tankMasterSub: "Управление емкостью, остатками и лимитами безопасности",
+                btnSaveTanks: "Сохранить Калибровку",
+                inflowFormTitle: "Регистрация Поставки",
+                inflowFormSub: "Ручной ввод данных о прибывших бензовозах и газовозах",
+                outflowFormTitle: "Регистрация Отпуска (Продажи)",
+                outflowFormSub: "Ручной учет показаний ТРК и заправок",
+                reportTitle: "Диспетчер Отчетов Gmail",
+                reportSub: "Генерация сменного отчета и отправка в Gmail",
+                lblFuelType: "Вид Топлива / Газа",
+                lblQuantity: "Объем (Л, Кг или м³)",
+                lblCost: "Стоимость Партии",
+                lblSupplier: "Поставщик",
+                lblBatchNo: "Номер ТТН / Накладной",
+                lblDensity: "Плотность (г/см³)",
+                lblTemp: "Температура (°C)",
+                lblPumpID: "Колонка / Пистолет",
+                lblStartMeter: "Начальный Счетчик",
+                lblEndMeter: "Конечный Счетчик",
+                lblUnitPrice: "Цена за ед.",
+                lblRecipient: "Email Руководителя",
+                lblReportType: "Шаблон Отчета",
+                btnRecordInflow: "Заприходовать",
+                btnRecordOutflow: "Зафиксировать Продажу",
+                btnSendGmail: "Открыть в Gmail",
+                btnExportCSV: "Экспорт в CSV",
+                tblFuelType: "Категория Топлива",
+                tblCapacity: "Емкость",
+                tblCurrentStock: "Текущий Остаток",
+                tblLevelGauge: "Заполнение",
+                tblMinThreshold: "Порог Тревоги",
+                tblStatus: "Статус",
+                tblDate: "Дата и Время",
+                tblSupplier: "Поставщик",
+                tblDoc: "Накладная",
+                tblPump: "ТРК / Пистолет",
+                tblMeters: "Счетчики",
+                tblQuantity: "Объем",
+                tblTotalVal: "Сумма",
+                tblActions: "Действие",
+                inflowLogTitle: "Журнал Поставок (Приход)",
+                inflowLogSub: "История принятых партий бензина и газа",
+                outflowLogTitle: "Журнал Реализации (Расход)",
+                outflowLogSub: "История продаж и показаний ТРК",
+                reportPreview: "Предпросмотр Письма"
+            },
+            uz: {
+                tagline: "AQS va AAGKS Yonilg'i Monitoring Tizimi",
+                navDashboard: "Boshqaruv Paneli",
+                navTanks: "Zaxiralar va Baklar",
+                navInflow: "Kirim (Keltirilgan)",
+                navOutflow: "Chiqim (Sotuv)",
+                navReports: "Gmail Hisobotlar",
+                navPython: "Python Usullari",
+                cardGasoline: "Benzin Zaxirasi",
+                cardPropane: "Propan Gaz Zaxirasi",
+                cardMethane: "Metan Gaz Zaxirasi",
+                cardDailySales: "Bugungi Tushum",
+                chartBarTitle: "7 Kunlik Dinamika (Kirim vs Chiqim)",
+                chartBarSub: "Keltirilgan va sotilgan yonilg'i hajmi taqqoslamasi",
+                chartDonutTitle: "Zaxiralar Taqsimoti",
+                chartDonutSub: "Yonilg'i turlari bo'yicha ulushlar",
+                tankGaugesTitle: "Baklar Satxini Visual Monitoring Qilish",
+                tankMasterTitle: "Baklar Kalibrovkasi va Zaxiralar",
+                tankMasterSub: "Baklar sig'imini va ogohlantirish me'yorlarini boshqarish",
+                btnSaveTanks: "Sozlamalarni Saqlash",
+                inflowFormTitle: "Keltirilgan Yonilg'ini Qabul Qilish",
+                inflowFormSub: "Yangi yonilg'i partiyasini kirim qilish",
+                outflowFormTitle: "Sotuv va Chiqimni Yozish",
+                outflowFormSub: "Kolonka hisoblagichlari va sotuvni qayd etish",
+                reportTitle: "Gmail Hisobot Yuboruvchi",
+                reportSub: "Hisobot yaratish va Gmail orqali yuborish",
+                lblFuelType: "Yonilg'i / Gaz Turi",
+                lblQuantity: "Miqdori (L, Kg, yoki m³)",
+                lblCost: "Tan Narxi",
+                lblSupplier: "Etkazib Beruvchi",
+                lblBatchNo: "Hujjat №",
+                lblDensity: "Zichlik (g/cm³)",
+                lblTemp: "Harorat (°C)",
+                lblPumpID: "Kolonka / Pistolet",
+                lblStartMeter: "Boshlang'ich Hisoblagich",
+                lblEndMeter: "Yakuniy Hisoblagich",
+                lblUnitPrice: "Birlik Narxi",
+                lblRecipient: "Menejer E-pochtasi",
+                lblReportType: "Hisobot Shakli",
+                btnRecordInflow: "Kirimni Qayd Etish",
+                btnRecordOutflow: "Sotuvni Qayd Etish",
+                btnSendGmail: "Gmail'da Ochish",
+                btnExportCSV: "CSV Eksport",
+                tblFuelType: "Yonilg'i Turi",
+                tblCapacity: "Jami Sig'im",
+                tblCurrentStock: "Hozirgi Zaxira",
+                tblLevelGauge: "To'ldirilganlik",
+                tblMinThreshold: "Ogohlantirish Chegarasi",
+                tblStatus: "Holat",
+                tblDate: "Sana va Vaqt",
+                tblSupplier: "Etkazib Beruvchi",
+                tblDoc: "Hujjat №",
+                tblPump: "Kolonka №",
+                tblMeters: "Hisoblagichlar",
+                tblQuantity: "Hajmi",
+                tblTotalVal: "Jami Summa",
+                tblActions: "Amal",
+                inflowLogTitle: "Kirim Qilingan Partiyalar Tarixi",
+                inflowLogSub: "Qabul qilingan yonilg'i yuklari ro'yxati",
+                outflowLogTitle: "Sotuv va Chiqim Tarixi",
+                outflowLogSub: "Kolonkalar va sotuv ko'rsatkichlari",
+                reportPreview: "Xat Matnining Ko'rinishi"
+            }
+        };
+
+        // --- STATE STORAGE & INITIAL DEMO DATA ---
+        let currentLang = 'en';
+
+        const defaultFuelState = {
+            GASOLINE_92: { name: "Gasoline A-92", capacity: 40000, stock: 24500, minThreshold: 8000, unit: "L", color: "#3b82f6" },
+            GASOLINE_95: { name: "Gasoline A-95", capacity: 30000, stock: 18200, minThreshold: 6000, unit: "L", color: "#60a5fa" },
+            DIESEL: { name: "Diesel Fuel", capacity: 50000, stock: 38900, minThreshold: 10000, unit: "L", color: "#f59e0b" },
+            PROPANE_LPG: { name: "Propane LPG", capacity: 25000, stock: 4100, minThreshold: 5000, unit: "Kg", color: "#ec4899" },
+            CNG_METHANE: { name: "CNG Methane", capacity: 15000, stock: 9800, minThreshold: 3000, unit: "m³", color: "#a855f7" }
+        };
+
+        const defaultInflowLogs = [
+            { id: 101, date: "2026-11-01 09:30", fuel: "GASOLINE_92", qty: 10000, cost: 85000000, supplier: "Uzbekneftegaz", doc: "INV-9901" },
+            { id: 102, date: "2026-11-03 14:15", fuel: "DIESEL", qty: 15000, cost: 150000000, supplier: "TransOil Logistics", doc: "INV-9942" },
+            { id: 103, date: "2026-11-04 11:00", fuel: "PROPANE_LPG", qty: 5000, cost: 32000000, supplier: "Gazprom LPG", doc: "INV-1021" }
+        ];
+
+        const defaultOutflowLogs = [
+            { id: 201, date: "2026-11-05 08:20", fuel: "GASOLINE_92", pump: "Dispenser #1", startMeter: 10200, endMeter: 11400, qty: 1200, price: 9500, total: 11400000 },
+            { id: 202, date: "2026-11-05 10:45", fuel: "DIESEL", pump: "Dispenser #3", startMeter: 5400, endMeter: 7200, qty: 1800, price: 11200, total: 20160000 },
+            { id: 203, date: "2026-11-05 13:10", fuel: "PROPANE_LPG", pump: "Propane Nozzle #1", startMeter: 8100, endMeter: 9650, qty: 1550, price: 6800, total: 10540000 }
+        ];
+
+        let fuelState = JSON.parse(localStorage.getItem('fp_fuelState')) || defaultFuelState;
+        let inflowLogs = JSON.parse(localStorage.getItem('fp_inflowLogs')) || defaultInflowLogs;
+        let outflowLogs = JSON.parse(localStorage.getItem('fp_outflowLogs')) || defaultOutflowLogs;
+
+        let barChart, donutChart;
+
+        // Initialize App
+        window.addEventListener('load', () => {
+            initCharts();
+            renderAll();
+            setLanguage('en');
+        });
+
+        function saveState() {
+            localStorage.setItem('fp_fuelState', JSON.stringify(fuelState));
+            localStorage.setItem('fp_inflowLogs', JSON.stringify(inflowLogs));
+            localStorage.setItem('fp_outflowLogs', JSON.stringify(outflowLogs));
+        }
+
+        function resetToDemoData() {
+            fuelState = JSON.parse(JSON.stringify(defaultFuelState));
+            inflowLogs = JSON.parse(JSON.stringify(defaultInflowLogs));
+            outflowLogs = JSON.parse(JSON.stringify(defaultOutflowLogs));
+            saveState();
+            renderAll();
+            showNotification("Reset system to default demo state", "info");
+        }
+
+        // Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                icon.className = "fa-solid fa-sun text-amber-500";
+            } else {
+                html.classList.remove('light');
+                html.classList.add('dark');
+                icon.className = "fa-solid fa-moon";
+            }
+        }
+
+        // Language Switcher
+        function setLanguage(lang) {
+            currentLang = lang;
+            ['en', 'ru', 'uz'].forEach(l => {
+                const btn = document.getElementById(`lang-${l}`);
+                if (l === lang) {
+                    btn.className = "px-2 py-1 rounded-lg transition bg-emerald-500 text-white font-bold shadow";
+                } else {
+                    btn.className = "px-2 py-1 rounded-lg transition hover:text-white text-slate-400 font-medium";
+                }
+            });
+
+            document.querySelectorAll('[data-i18n]').forEach(elem => {
+                const key = elem.getAttribute('data-i18n');
+                if (translations[lang] && translations[lang][key]) {
+                    elem.innerText = translations[lang][key];
+                }
+            });
+
+            renderAll();
+            generateReportPreview();
+        }
+
+        // Tab Navigation
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = "nav-btn px-3 py-2 rounded-xl text-xs font-semibold transition text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 flex items-center gap-2";
+            });
+
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if (activeBtn) {
+                activeBtn.className = "nav-btn px-3 py-2 rounded-xl text-xs font-semibold transition text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2";
+            }
+
+            if (tabId === 'dashboard') updateCharts();
+        }
+
+        // Render Master Controller
+        function renderAll() {
+            renderDashboardCards();
+            renderDashboardTankCards();
+            renderMasterTankTable();
+            renderInflowTable();
+            renderOutflowTable();
+            updateCharts();
+        }
+
+        function renderDashboardCards() {
+            let gasolineLitres = (fuelState.GASOLINE_92?.stock || 0) + (fuelState.GASOLINE_95?.stock || 0);
+            let propaneKg = fuelState.PROPANE_LPG?.stock || 0;
+            let methaneM3 = fuelState.CNG_METHANE?.stock || 0;
+
+            let todayRevenue = 0;
+            let todayVol = 0;
+            outflowLogs.forEach(log => {
+                todayRevenue += log.total;
+                todayVol += log.qty;
+            });
+
+            document.getElementById('statGasolineStock').innerText = `${gasolineLitres.toLocaleString()} L`;
+            document.getElementById('statPropaneStock').innerText = `${propaneKg.toLocaleString()} Kg`;
+            document.getElementById('statMethaneStock').innerText = `${methaneM3.toLocaleString()} m³`;
+            document.getElementById('statTodaySales').innerText = `${todayRevenue.toLocaleString()} UZS`;
+            document.getElementById('statTodaySalesVol').innerText = `${todayVol.toLocaleString()} units dispensed`;
+        }
+
+        function renderDashboardTankCards() {
+            const container = document.getElementById('tankCardsDashboard');
+            container.innerHTML = '';
+
+            Object.keys(fuelState).forEach(key => {
+                const tank = fuelState[key];
+                const pct = Math.min(100, Math.max(0, Math.round((tank.stock / tank.capacity) * 100)));
+
+                let badgeClass = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                let statusText = "Optimal";
+                if (tank.stock <= tank.minThreshold) {
+                    badgeClass = "bg-red-500/10 text-red-400 border-red-500/20 animate-pulse";
+                    statusText = "Low Stock";
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900/60 dark:bg-slate-900/60 light:bg-white p-4 rounded-xl border border-slate-800 dark:border-slate-800 light:border-slate-200 space-y-3 shadow-sm";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-white dark:text-white light:text-slate-900">${tank.name}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded-md border ${badgeClass} font-semibold">${statusText}</span>
+                    </div>
+
+                    <!-- SVG Animated Liquid Gauge -->
+                    <div class="relative w-full h-24 bg-slate-950 dark:bg-slate-950 light:bg-slate-100 rounded-xl overflow-hidden border border-slate-800/80 flex items-end justify-center">
+                        <div class="absolute inset-0 flex items-center justify-center z-10">
+                            <span class="text-sm font-extrabold font-mono text-white drop-shadow">${pct}%</span>
+                        </div>
+                        <div class="w-full bg-emerald-500/80 transition-all duration-700 relative overflow-hidden" style="height: ${pct}%; background-color: ${tank.color}">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+                        <span>${tank.stock.toLocaleString()} ${tank.unit}</span>
+                        <span>Max: ${tank.capacity.toLocaleString()}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderMasterTankTable() {
+            const tbody = document.getElementById('tankMasterBody');
+            tbody.innerHTML = '';
+
+            Object.keys(fuelState).forEach(key => {
+                const tank = fuelState[key];
+                const pct = Math.min(100, Math.round((tank.stock / tank.capacity) * 100));
+
+                let statusBadge = `<span class="px-2 py-1 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">OK Normal</span>`;
+                if (tank.stock <= tank.minThreshold) {
+                    statusBadge = `<span class="px-2 py-1 rounded-md bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse">Low Reserve</span>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition border-b border-slate-800/50";
+                tr.innerHTML = `
+                    <td class="p-3 font-semibold text-white dark:text-white light:text-slate-900">${tank.name}</td>
+                    <td class="p-3 text-slate-300 dark:text-slate-300 light:text-slate-700">
+                        <input type="number" value="${tank.capacity}" onchange="updateTankVal('${key}', 'capacity', this.value)" class="bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded px-2 py-1 w-24 text-xs font-mono text-white dark:text-white light:text-slate-900"> ${tank.unit}
+                    </td>
+                    <td class="p-3 font-bold text-emerald-400">
+                        <input type="number" value="${tank.stock}" onchange="updateTankVal('${key}', 'stock', this.value)" class="bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded px-2 py-1 w-24 text-xs font-mono text-white dark:text-white light:text-slate-900"> ${tank.unit}
+                    </td>
+                    <td class="p-3 w-36">
+                        <div class="flex items-center gap-2">
+                            <div class="w-full bg-slate-800 rounded-full h-2">
+                                <div class="bg-emerald-500 h-2 rounded-full" style="width: ${pct}%"></div>
+                            </div>
+                            <span class="text-[10px] text-slate-400">${pct}%</span>
+                        </div>
+                    </td>
+                    <td class="p-3 text-slate-300 dark:text-slate-300 light:text-slate-700">
+                        <input type="number" value="${tank.minThreshold}" onchange="updateTankVal('${key}', 'minThreshold', this.value)" class="bg-slate-900 dark:bg-slate-900 light:bg-white border border-slate-700 rounded px-2 py-1 w-24 text-xs font-mono text-white dark:text-white light:text-slate-900"> ${tank.unit}
+                    </td>
+                    <td class="p-3">${statusBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function updateTankVal(key, prop, value) {
+            fuelState[key][prop] = parseFloat(value) || 0;
+        }
+
+        function saveTankSettings() {
+            saveState();
+            renderAll();
+            showNotification("Tank master calibration saved successfully!", "success");
+        }
+
+        function renderInflowTable() {
+            const tbody = document.getElementById('inflowLogBody');
+            tbody.innerHTML = '';
+
+            inflowLogs.slice().reverse().forEach(log => {
+                const fuelObj = fuelState[log.fuel] || { name: log.fuel, unit: "L" };
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition";
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-400">${log.date}</td>
+                    <td class="p-3 font-semibold text-white dark:text-white light:text-slate-900">${fuelObj.name}</td>
+                    <td class="p-3 font-bold text-emerald-400">+${log.qty.toLocaleString()} ${fuelObj.unit}</td>
+                    <td class="p-3 text-slate-300 dark:text-slate-300 light:text-slate-700">${(log.cost || 0).toLocaleString()} UZS</td>
+                    <td class="p-3 text-slate-300 dark:text-slate-300 light:text-slate-700">${log.supplier}</td>
+                    <td class="p-3 text-slate-400">${log.doc}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteLog('inflow', ${log.id})" class="text-xs text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderOutflowTable() {
+            const tbody = document.getElementById('outflowLogBody');
+            tbody.innerHTML = '';
+
+            outflowLogs.slice().reverse().forEach(log => {
+                const fuelObj = fuelState[log.fuel] || { name: log.fuel, unit: "L" };
+                const meterRange = (log.startMeter || log.endMeter) ? `${log.startMeter || 0} - ${log.endMeter || 0}` : '-';
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/40 transition";
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-400">${log.date}</td>
+                    <td class="p-3 font-semibold text-white dark:text-white light:text-slate-900">${fuelObj.name}</td>
+                    <td class="p-3 text-slate-300 dark:text-slate-300 light:text-slate-700">${log.pump}</td>
+                    <td class="p-3 text-slate-400">${meterRange}</td>
+                    <td class="p-3 font-bold text-amber-400">-${log.qty.toLocaleString()} ${fuelObj.unit}</td>
+                    <td class="p-3 font-bold text-slate-200 dark:text-slate-200 light:text-slate-800">${log.total.toLocaleString()} UZS</td>
+                    <td class="p-3 text-right">
+                        <button onclick="deleteLog('outflow', ${log.id})" class="text-xs text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteLog(type, id) {
+            if (type === 'inflow') {
+                const idx = inflowLogs.findIndex(i => i.id === id);
+                if (idx !== -1) {
+                    const item = inflowLogs[idx];
+                    if (fuelState[item.fuel]) fuelState[item.fuel].stock -= item.qty;
+                    inflowLogs.splice(idx, 1);
+                }
+            } else {
+                const idx = outflowLogs.findIndex(o => o.id === id);
+                if (idx !== -1) {
+                    const item = outflowLogs[idx];
+                    if (fuelState[item.fuel]) fuelState[item.fuel].stock += item.qty;
+                    outflowLogs.splice(idx, 1);
+                }
+            }
+            saveState();
+            renderAll();
+            showNotification(`Deleted transaction from ${type} log`, "info");
+        }
+
+        // Form Handlers
+        document.getElementById('inflowForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fuelKey = document.getElementById('inflowFuel').value;
+            const qty = parseFloat(document.getElementById('inflowQty').value);
+            const cost = parseFloat(document.getElementById('inflowCost').value) || 0;
+            const supplier = document.getElementById('inflowSupplier').value;
+            const doc = document.getElementById('inflowBatch').value;
+
+            if (qty <= 0) return;
+
+            if (fuelState[fuelKey]) {
+                fuelState[fuelKey].stock += qty;
+            }
+
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
+
+            inflowLogs.push({ id: Date.now(), date: dateStr, fuel: fuelKey, qty, cost, supplier, doc });
+
+            saveState();
+            renderAll();
+            e.target.reset();
+            showNotification(`Recorded Delivery: +${qty} ${fuelState[fuelKey].unit} of ${fuelState[fuelKey].name}`, "success");
+        });
+
+        document.getElementById('outflowForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const fuelKey = document.getElementById('outflowFuel').value;
+            const pump = document.getElementById('outflowPump').value;
+            const startMeter = parseFloat(document.getElementById('outflowStartMeter').value) || null;
+            const endMeter = parseFloat(document.getElementById('outflowEndMeter').value) || null;
+            const qty = parseFloat(document.getElementById('outflowQty').value);
+            const price = parseFloat(document.getElementById('outflowPrice').value);
+
+            if (qty <= 0 || price <= 0) return;
+
+            if (fuelState[fuelKey].stock < qty) {
+                showNotification(`Error: Insufficient stock for ${fuelState[fuelKey].name}`, "error");
+                return;
+            }
+
+            fuelState[fuelKey].stock -= qty;
+
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 5);
+
+            outflowLogs.push({
+                id: Date.now(),
+                date: dateStr,
+                fuel: fuelKey,
+                pump,
+                startMeter,
+                endMeter,
+                qty,
+                price,
+                total: qty * price
+            });
+
+            saveState();
+            renderAll();
+            e.target.reset();
+            showNotification(`Recorded Sale: -${qty} ${fuelState[fuelKey].unit} (${(qty * price).toLocaleString()} UZS)`, "info");
+        });
+
+        // Charts Engine
+        function initCharts() {
+            const barCtx = document.getElementById('barChartInflowOutflow').getContext('2d');
+            barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [
+                        { label: 'Inflow Delivered', data: [10000, 0, 15000, 5000, 0, 8000, 12000], backgroundColor: '#10b981', borderRadius: 6 },
+                        { label: 'Dispensed Sales', data: [4200, 3800, 6100, 5200, 4900, 7100, 6500], backgroundColor: '#f59e0b', borderRadius: 6 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+
+            const donutCtx = document.getElementById('donutChartStock').getContext('2d');
+            donutChart = new Chart(donutCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(fuelState).map(k => fuelState[k].name),
+                    datasets: [{
+                        data: Object.keys(fuelState).map(k => fuelState[k].stock),
+                        backgroundColor: Object.keys(fuelState).map(k => fuelState[k].color),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12 } } }
+                }
+            });
+        }
+
+        function updateCharts() {
+            if (!donutChart) return;
+            donutChart.data.labels = Object.keys(fuelState).map(k => fuelState[k].name);
+            donutChart.data.datasets[0].data = Object.keys(fuelState).map(k => fuelState[k].stock);
+            donutChart.update();
+        }
+
+        // Gmail Dispatcher
+        function generateReportPreview() {
+            const template = document.getElementById('reportType').value;
+            const previewBox = document.getElementById('reportPreviewContent');
+
+            const now = new Date().toLocaleString();
+            let body = "";
+
+            if (template === 'DAILY_SUMMARY') {
+                body = `FUEL STATION SHIFT SUMMARY REPORT\n`;
+                body += `Generated: ${now}\n`;
+                body += `==============================================\n\n`;
+                body += `CURRENT STORAGE RESERVES:\n`;
+                Object.keys(fuelState).forEach(k => {
+                    const item = fuelState[k];
+                    body += ` • ${item.name}: ${item.stock.toLocaleString()} ${item.unit} / Cap: ${item.capacity.toLocaleString()} ${item.unit}\n`;
+                });
+                body += `\nTRANSACTION LOG COUNTS:\n`;
+                body += ` • Total Delivery Inflows: ${inflowLogs.length}\n`;
+                body += ` • Total Outflow Sales: ${outflowLogs.length}\n\n`;
+                body += `Status: Operational Shift Complete`;
+            } else if (template === 'LOW_STOCK') {
+                body = `URGENT: CRITICAL LOW FUEL ALERT\n`;
+                body += `Generated: ${now}\n`;
+                body += `==============================================\n\n`;
+                let lowCount = 0;
+                Object.keys(fuelState).forEach(k => {
+                    const item = fuelState[k];
+                    if (item.stock <= item.minThreshold) {
+                        lowCount++;
+                        body += ` [!] ${item.name.toUpperCase()}\n`;
+                        body += `     Current Level: ${item.stock} ${item.unit}\n`;
+                        body += `     Safety Threshold: ${item.minThreshold} ${item.unit}\n\n`;
+                    }
+                });
+                if (lowCount === 0) body += ` [✓] All storage tanks operating above safety threshold.`;
+            } else {
+                body = `SHIPMENT DELIVERIES AUDIT LOG\n`;
+                body += `Generated: ${now}\n`;
+                body += `==============================================\n\n`;
+                inflowLogs.forEach((l, idx) => {
+                    body += `${idx + 1}. [${l.date}] ${l.fuel} - ${l.qty} Units | Invoice: ${l.doc} | Supplier: ${l.supplier}\n`;
+                });
+            }
+
+            previewBox.innerText = body;
+        }
+
+        function sendViaGmail() {
+            const email = encodeURIComponent(document.getElementById('reportEmail').value || "headquarters@fuelstation.com");
+            const template = document.getElementById('reportType').value;
+            const body = encodeURIComponent(document.getElementById('reportPreviewContent').innerText);
+
+            let subject = "Fuel Station Daily Shift Summary Report";
+            if (template === 'LOW_STOCK') subject = "URGENT: Low Fuel Level Alert";
+            if (template === 'DELIVERY_AUDIT') subject = "Fuel Shipment Deliveries Audit";
+
+            const mailtoUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${encodeURIComponent(subject)}&body=${body}`;
+            window.open(mailtoUrl, '_blank');
+            showNotification("Opened Gmail composer window!", "info");
+        }
+
+        function copyReportText() {
+            const text = document.getElementById('reportPreviewContent').innerText;
+            navigator.clipboard.writeText(text);
+            showNotification("Report text copied to clipboard!", "success");
+        }
+
+        function copyPythonScript() {
+            const code = document.getElementById('pythonCodeBlock').innerText;
+            navigator.clipboard.writeText(code);
+            showNotification("Python script copied to clipboard!", "success");
+        }
+
+        function exportCSV(type) {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            if (type === 'inflow') {
+                csvContent += "Date,Fuel,Quantity,Cost,Supplier,Document\n";
+                inflowLogs.forEach(i => {
+                    csvContent += `"${i.date}","${i.fuel}",${i.qty},${i.cost || 0},"${i.supplier}","${i.doc}"\n`;
+                });
+            } else {
+                csvContent += "Date,Fuel,Pump,StartMeter,EndMeter,Quantity,Price,Total\n";
+                outflowLogs.forEach(o => {
+                    csvContent += `"${o.date}","${o.fuel}","${o.pump}",${o.startMeter || 0},${o.endMeter || 0},${o.qty},${o.price},${o.total}\n`;
+                });
+            }
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `fuel_${type}_log.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showNotification(`Exported ${type} log as CSV file`, "info");
+        }
+
+        function showNotification(message, type = "info") {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+
+            let bgClass = "bg-slate-800 text-slate-100 border-slate-700";
+            let icon = "fa-circle-info text-blue-400";
+            if (type === "success") {
+                bgClass = "bg-emerald-950 text-emerald-100 border-emerald-800";
+                icon = "fa-circle-check text-emerald-400";
+            } else if (type === "error") {
+                bgClass = "bg-red-950 text-red-100 border-red-800";
+                icon = "fa-triangle-exclamation text-red-400";
+            }
+
+            toast.className = `p-3.5 rounded-xl border shadow-xl flex items-center justify-between text-xs font-semibold backdrop-blur pointer-events-auto transition-all transform translate-y-2 opacity-0 ${bgClass}`;
+            toast.innerHTML = `
+                <div class="flex items-center space-x-2.5">
+                    <i class="fa-solid ${icon} text-base"></i>
+                    <span>${message}</span>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white ml-4"><i class="fa-solid fa-xmark"></i></button>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 10);
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        document.getElementById('outflowEndMeter').addEventListener('input', function () {
+            const start = parseFloat(document.getElementById('outflowStartMeter').value) || 0;
+            const end = parseFloat(this.value) || 0;
+            if (end > start) {
+                document.getElementById('outflowQty').value = (end - start).toFixed(1);
+            }
+        });
+    </script>
+</body>
+
+</html>
